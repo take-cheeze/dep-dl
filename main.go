@@ -72,12 +72,12 @@ func (pj *project) dlGithub(user, repo string) error {
 
 		nameDirs := strings.Split(hdr.Name, "/")
 		if len(nameDirs) > 2 {
-			pkg := filepath.Join(nameDirs[1:len(nameDirs) - 2]...)
+			pkg := filepath.Join(nameDirs[1:len(nameDirs) - 1]...)
 			if !pj.subdirTable[pkg] { continue }
 		}
 
 		target := filepath.Join(baseDir, filepath.Join(nameDirs[1:]...))
-		if (target == baseDir) { continue }
+		if target == baseDir { continue }
 
 		if *fVerbose { fmt.Println("Writing:", target) }
 
