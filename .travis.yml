@@ -5,4 +5,10 @@ go:
   - "1.9"
   - "1.10.x"
   - master
-script: go install && git clone --depth=1 https://github.com/coreos/etcd.git && dep-dl
+script: |
+  go install
+  mkdir -p $GOPATH/src/github.com/coreos
+  git clone --depth=1 https://github.com/coreos/etcd.git $GOPATH/src/github.com/coreos/etcd
+  cd $GOPATH/src/github.com/coreos/etcd
+  dep-dl
+  go build ./...
