@@ -1,0 +1,8 @@
+language: go
+go:
+  - "1.x"
+  - "1.8"
+  - "1.9"
+  - "1.10.x"
+  - master
+script: go install && git clone --depth=1 git@github.com:coreos/etcd.git && dep-dl
