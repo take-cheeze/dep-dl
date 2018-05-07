@@ -102,21 +102,24 @@ func (pj *project) dlGithub(user, repo string) error {
 	return nil
 }
 
-func (pj *project) dlGit(path string) error {
+func (pj *project) dlGit(path string) ([]byte, error) {
 	if match := githubRegexp.FindStringSubmatch(path); match != nil {
-		return pj.dlGithub(match[1], match[2])
+		return nil, pj.dlGithub(match[1], match[2])
 	}
 
 	baseDir := filepath.Join(vendorDir, pj.Name)
-	if err := os.MkdirAll(filepath.Dir(baseDir), 0777); err != nil { return errors.WithStack(err) }
+	if err := os.MkdirAll(filepath.Dir(baseDir), 0777); err != nil && !os.IsExist(err) { return nil, errors.WithStack(err) }
+
+	os.RemoveAll(baseDir)
 
 	cloneCmd := exec.Command("git", "clone", path, baseDir)
-	if err := cloneCmd.Run(); err != nil { return nil }
+	if buf, err := cloneCmd.Output(); err != nil { return buf, errors.WithStack(err) }
 
 	resetCmd := exec.Command("git", "reset", "--hard", pj.Revision)
-	if err := resetCmd.Run(); err != nil { return nil }
+	resetCmd.Dir = baseDir
+	if buf, err := resetCmd.Output(); err != nil { return buf, errors.WithStack(err) }
 
-	return nil
+	return nil, nil
 }
 
 
@@ -227,13 +230,26 @@ func (pj *project) download(swg *sizedwaitgroup.SizedWaitGroup) {
 
 	if match := githubRegexp.FindStringSubmatch(src); match != nil {
 		fmt.Println("Downloading from github:", pj.Name, "(", src, pj.Revision, ")")
-		if err := pj.dlGithub(match[1], match[2]); err != nil { panic(fmt.Sprintf("%+v", err)) }
+		if err := pj.dlGithub(match[1], match[2]); err != nil {
+			panic(err)
+		}
 		return
 	}
 
 	if match := gopkgRegexp.FindStringSubmatch(src); match != nil {
 		fmt.Println("Downloading from gopkg:", pj.Name, "(", src, pj.Revision, ")")
-		if err := pj.dlGit(src); err != nil { panic(err) }
+		var gitUrl string
+		if !strings.HasPrefix(src, "https://") {
+			gitUrl = "https://" + src
+		}
+		if log, err := pj.dlGit(gitUrl); err != nil {
+			if log != nil {
+				fmt.Fprintln(os.Stderr, string(log))
+			}
+			fmt.Fprintln(os.Stderr, pj.Name)
+			fmt.Fprintf(os.Stderr, "%+v\n", err)
+			panic(err)
+		}
 		return
 	}
 
@@ -244,7 +260,14 @@ func (pj *project) download(swg *sizedwaitgroup.SizedWaitGroup) {
 	}
 
 	fmt.Println("Downloading from go-imports:", pj.Name, "(", meta.RepoRoot, pj.Revision, ")")
-	if err := pj.dlGit(meta.RepoRoot); err != nil { panic(err) }
+	if log, err := pj.dlGit(meta.RepoRoot); err != nil {
+		if log != nil {
+			fmt.Fprintln(os.Stderr, string(log))
+		}
+		fmt.Fprintln(os.Stderr, pj.Name)
+		fmt.Fprintf(os.Stderr, "%+v\n", err)
+		panic(err)
+	}
 }
 
 func main() {
