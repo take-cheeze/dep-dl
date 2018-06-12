@@ -13,8 +13,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime/pprof"
 	"regexp"
+	"runtime/pprof"
 	"strings"
 
 	toml "github.com/pelletier/go-toml"
@@ -23,7 +23,7 @@ import (
 )
 
 type lock struct {
-	Projects  []*project `toml:"projects"`
+	Projects []*project `toml:"projects"`
 }
 
 type project struct {
@@ -38,18 +38,20 @@ type project struct {
 }
 
 var (
-	gopkgRegexp = regexp.MustCompile("gopkg.in/(.+)")
-	vendorDir = ""
-	fVerbose = flag.Bool("v", false, "verbose output")
 	githubRegexp = regexp.MustCompile("github.com/(?P<user>[^/ ]+)/(?P<repo>[^/ ]+)")
+	gopkgRegexp  = regexp.MustCompile("gopkg.in/(.+)")
+	vendorDir    = ""
+	fVerbose     = flag.Bool("v", false, "verbose output")
 	fParallelism = flag.Int("p", 4, "parallelism of download")
-	fCpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+	fCpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
 )
 
 func (pj *project) dlGithub(user, repo string) error {
 	tarballUrl := fmt.Sprintf("https://api.github.com/repos/%s/%s/tarball/%s", user, repo, pj.Revision)
 	resp, err := http.Get(tarballUrl)
-	if err != nil { return errors.WithStack(err) }
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -57,49 +59,73 @@ func (pj *project) dlGithub(user, repo string) error {
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	buf := bytes.NewBuffer(body)
 
 	gz, err := gzip.NewReader(buf)
-	if err != nil { return errors.WithStack(err) }
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	defer gz.Close()
 
 	files := tar.NewReader(gz)
 
 	baseDir := filepath.Join(vendorDir, pj.Name)
-	if err := os.RemoveAll(baseDir); err != nil && !os.IsNotExist(err) { return errors.WithStack(err) }
-	if err = os.MkdirAll(baseDir, 0777); err != nil { return errors.WithStack(err) }
+	if err := os.RemoveAll(baseDir); err != nil && !os.IsNotExist(err) {
+		return errors.WithStack(err)
+	}
+	if err = os.MkdirAll(baseDir, 0777); err != nil {
+		return errors.WithStack(err)
+	}
 	for {
 		hdr, err := files.Next()
 
-		if err == io.EOF { break }
-		if err != nil { return errors.WithStack(err) }
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return errors.WithStack(err)
+		}
 
 		nameDirs := strings.Split(hdr.Name, "/")
 		if len(nameDirs) > 2 {
-			pkg := filepath.Join(nameDirs[1:len(nameDirs) - 1]...)
-			if !pj.subdirTable[pkg] { continue }
+			pkg := filepath.Join(nameDirs[1 : len(nameDirs)-1]...)
+			if !pj.subdirTable[pkg] {
+				continue
+			}
 		}
 
 		target := filepath.Join(baseDir, filepath.Join(nameDirs[1:]...))
-		if target == baseDir { continue }
+		if target == baseDir {
+			continue
+		}
 
-		if *fVerbose { fmt.Println("Writing:", target) }
+		if *fVerbose {
+			fmt.Println("Writing:", target)
+		}
 
 		switch hdr.Typeflag {
 		case tar.TypeReg, tar.TypeRegA:
 			f, err := os.OpenFile(target, os.O_RDWR|os.O_CREATE, os.FileMode(hdr.Mode))
-			if err != nil { return errors.WithStack(err) }
+			if err != nil {
+				return errors.WithStack(err)
+			}
 			defer f.Close()
 
-			if _, err := io.Copy(f, files); err != nil { return errors.WithStack(err) }
+			if _, err := io.Copy(f, files); err != nil {
+				return errors.WithStack(err)
+			}
 			f.Close()
 		case tar.TypeDir:
 			if err := os.MkdirAll(target, 0777); err != nil && !os.IsExist(err) {
 				return errors.WithStack(err)
 			}
 		case tar.TypeSymlink:
-			if err := os.Symlink(target, hdr.Linkname); err != nil { return errors.WithStack(err) }
+			if err := os.Symlink(target, hdr.Linkname); err != nil {
+				return errors.WithStack(err)
+			}
 		}
 		os.Chtimes(target, hdr.AccessTime, hdr.ModTime)
 	}
@@ -113,20 +139,25 @@ func (pj *project) dlGit(path string) ([]byte, error) {
 	}
 
 	baseDir := filepath.Join(vendorDir, pj.Name)
-	if err := os.MkdirAll(filepath.Dir(baseDir), 0777); err != nil && !os.IsExist(err) { return nil, errors.WithStack(err) }
+	if err := os.MkdirAll(filepath.Dir(baseDir), 0777); err != nil && !os.IsExist(err) {
+		return nil, errors.WithStack(err)
+	}
 
 	os.RemoveAll(baseDir)
 
 	cloneCmd := exec.Command("git", "clone", path, baseDir)
-	if buf, err := cloneCmd.Output(); err != nil { return buf, errors.WithStack(err) }
+	if buf, err := cloneCmd.Output(); err != nil {
+		return buf, errors.WithStack(err)
+	}
 
 	resetCmd := exec.Command("git", "reset", "--hard", pj.Revision)
 	resetCmd.Dir = baseDir
-	if buf, err := resetCmd.Output(); err != nil { return buf, errors.WithStack(err) }
+	if buf, err := resetCmd.Output(); err != nil {
+		return buf, errors.WithStack(err)
+	}
 
 	return nil, nil
 }
-
 
 // Codes from: go/src/cmd/go/internal/get/discovery.go
 
@@ -192,6 +223,7 @@ func parseMetaGoImports(r io.Reader) (imports []metaImport, err error) {
 		if attrValue(e.Attr, "name") != "go-import" {
 			continue
 		}
+
 		if f := strings.Fields(attrValue(e.Attr, "content")); len(f) == 3 {
 			imports = append(imports, metaImport{
 				Prefix:   f[0],
@@ -215,11 +247,15 @@ func attrValue(attrs []xml.Attr, name string) string {
 
 func getGoImports(path string) (*metaImport, error) {
 	resp, err := http.Get(fmt.Sprintf("https://%s?go-get=1", path))
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
 
 	imports, err := parseMetaGoImports(resp.Body)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	if len(imports) != 1 {
 		return nil, fmt.Errorf("Too many imports: %v", imports)
@@ -232,7 +268,9 @@ func (pj *project) download(swg *sizedwaitgroup.SizedWaitGroup) {
 
 	pj.subdirTable = make(map[string]bool, len(pj.Packages))
 	for _, dir := range pj.Packages {
-		if dir == "." { dir = "" }
+		if dir == "." {
+			dir = ""
+		}
 		pj.subdirTable[dir] = true
 	}
 
@@ -240,7 +278,6 @@ func (pj *project) download(swg *sizedwaitgroup.SizedWaitGroup) {
 	if len(src) == 0 {
 		src = pj.Name
 	}
-
 
 	if match := githubRegexp.FindStringSubmatch(src); match != nil {
 		fmt.Println("Downloading from github:", pj.Name, "(", src, pj.Revision, ")")
@@ -268,7 +305,9 @@ func (pj *project) download(swg *sizedwaitgroup.SizedWaitGroup) {
 	}
 
 	meta, err := getGoImports(src)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	if strings.ToLower(meta.VCS) != "git" {
 		panic(fmt.Errorf("Unsupported VCS type: %s", meta.VCS))
 	}
@@ -289,24 +328,34 @@ func main() {
 
 	if *fCpuprofile != "" {
 		f, err := os.Create(*fCpuprofile)
-		if err != nil { panic(err) }
+		if err != nil {
+			panic(err)
+		}
 		defer f.Close()
-		if err := pprof.StartCPUProfile(f); err != nil { panic(err) }
+		if err := pprof.StartCPUProfile(f); err != nil {
+			panic(err)
+		}
 		defer pprof.StopCPUProfile()
 	}
 
 	// target directory would be current directory
 	wd, err := os.Getwd()
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 
 	vendorDir = filepath.Join(wd, "vendor")
 
 	// read Gopkg.lock
 	lockfile, err := os.Open(filepath.Join(wd, "Gopkg.lock"))
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 
 	var lock lock
-	if err := toml.NewDecoder(lockfile).Decode(&lock); err != nil { panic(err) }
+	if err := toml.NewDecoder(lockfile).Decode(&lock); err != nil {
+		panic(err)
+	}
 
 	fmt.Println("Download start:")
 
