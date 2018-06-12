@@ -38,10 +38,10 @@ type project struct {
 }
 
 var (
-	githubRegexp = regexp.MustCompile("github.com/(?P<user>[^/]+)/(?P<repo>[^/]+)")
 	gopkgRegexp = regexp.MustCompile("gopkg.in/(.+)")
 	vendorDir = ""
 	fVerbose = flag.Bool("v", false, "verbose output")
+	githubRegexp = regexp.MustCompile("github.com/(?P<user>[^/ ]+)/(?P<repo>[^/ ]+)")
 	fParallelism = flag.Int("p", 4, "parallelism of download")
 	fCpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 )
@@ -180,6 +180,15 @@ func parseMetaGoImports(r io.Reader) (imports []metaImport, err error) {
 		if !ok || !strings.EqualFold(e.Name.Local, "meta") {
 			continue
 		}
+
+		// Check go-source for github link
+		if attrValue(e.Attr, "name") == "go-source" && len(imports) == 1 {
+			if match := githubRegexp.FindStringSubmatch(attrValue(e.Attr, "content")); match != nil {
+				imports = []metaImport{{Prefix: imports[0].Prefix, VCS: "git", RepoRoot: match[0]}}
+				continue
+			}
+		}
+
 		if attrValue(e.Attr, "name") != "go-import" {
 			continue
 		}
