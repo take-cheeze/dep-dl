@@ -47,9 +47,14 @@ var (
 )
 
 func (pj *project) dlGithub(user, repo string) error {
-	resp, err := http.Get(fmt.Sprintf("https://api.github.com/repos/%s/%s/tarball/%s", user, repo, pj.Revision))
+	tarballUrl := fmt.Sprintf("https://api.github.com/repos/%s/%s/tarball/%s", user, repo, pj.Revision)
+	resp, err := http.Get(tarballUrl)
 	if err != nil { return errors.WithStack(err) }
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.Errorf("failed getting tarball: status %s (URL: %s)", resp.Status, tarballUrl)
+	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil { return err }
