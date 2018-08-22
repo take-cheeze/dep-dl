@@ -38,7 +38,7 @@ type project struct {
 }
 
 var (
-	githubRegexp = regexp.MustCompile("github.com/(?P<user>[^/ ]+)/(?P<repo>[^/ ]+)")
+	githubRegexp = regexp.MustCompile("github.com/(?P<user>[^/ \n]+)/(?P<repo>[^/ \n]+)")
 	gopkgRegexp  = regexp.MustCompile("gopkg.in/(.+)")
 	vendorDir    = ""
 	fVerbose     = flag.Bool("v", false, "verbose output")
