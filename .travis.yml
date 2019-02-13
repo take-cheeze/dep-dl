@@ -4,13 +4,9 @@ go:
   - "1.9"
   - "1.10.x"
 script: |
+  set -e
+
   go install
-  mkdir -p $GOPATH/src/github.com/coreos
-  git clone --depth=1 https://github.com/coreos/etcd.git $GOPATH/src/github.com/coreos/etcd
-  cd $GOPATH/src/github.com/coreos/etcd
-  rm -rf vendor
-  dep-dl
-  go build -v
 
   mkdir -p $GOPATH/src/github.com/Jille
   git clone --depth=1 https://github.com/Jille/rufs.git $GOPATH/src/github.com/Jille/rufs
