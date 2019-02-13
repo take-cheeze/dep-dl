@@ -257,10 +257,12 @@ func getGoImports(path string) (*metaImport, error) {
 		return nil, err
 	}
 
-	if len(imports) != 1 {
-		return nil, fmt.Errorf("Too many imports: %v", imports)
+	for _, i := range imports {
+		if i.Prefix == path {
+			return &i, nil
+		}
 	}
-	return &imports[0], nil
+	return nil, fmt.Errorf("Import '%s' not found in: %v", path, imports)
 }
 
 func (pj *project) download(swg *sizedwaitgroup.SizedWaitGroup) {

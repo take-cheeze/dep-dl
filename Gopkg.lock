@@ -2,26 +2,36 @@
 
 
 [[projects]]
+  digest = "1:7231124c9669dfb54b82ef8b89f2735cf5d5d2529a23c6ac93a8c4b8bbb28b28"
   name = "github.com/pelletier/go-toml"
   packages = ["."]
+  pruneopts = "UT"
   revision = "acdc4509485b587f5e675510c4f2c63e90ff68a8"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
   name = "github.com/pkg/errors"
   packages = ["."]
+  pruneopts = "UT"
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:b0b4b77fa9179f50b978af0b8132dd69000efbc3a799d5b1b361ed640f979736"
   name = "github.com/remeh/sizedwaitgroup"
   packages = ["."]
+  pruneopts = "UT"
   revision = "5582a674300c427060d06980c142aeb52ed20040"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f44db3ee1a628f87c4db86dae18fa61bcd17a0da60bf2a1d9da8e03872525a87"
+  input-imports = [
+    "github.com/pelletier/go-toml",
+    "github.com/pkg/errors",
+    "github.com/remeh/sizedwaitgroup",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
